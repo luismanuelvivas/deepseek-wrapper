@@ -1,0 +1,75 @@
+/g, function(match, lang, code) {
+          lang = lang || 'plaintext';
+          return `<div class="bg-gray-800 rounded-lg p-3 my-2 overflow-x-auto"><pre><code class="language-${lang}">${code.trim()}</code></pre></div>`;
+        });
+        
+        // Replace **content** with bold
+        content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // Replace headings with appropriate HTML tags
+        content = content.replace(/^#### (.*$)/gm, '<h4 class="text-lg font-semibold mt-4 mb-2">$1</h4>');
+        content = content.replace(/^### (.*$)/gm, '<h3 class="text-xl font-semibold mt-4 mb-2">$1</h3>');
+        content = content.replace(/^## (.*$)/gm, '<h2 class="text-2xl font-bold mt-4 mb-3">$1</h2>');
+        content = content.replace(/^# (.*$)/gm, '<h1 class="text-3xl font-bold mt-4 mb-4">$1</h1>');
+        
+        // Preserve line breaks
+        content = content.replace(/\n/g, '<br>');
+        
+        return content;
+      }
+
+      function addMessage(role, content) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `mb-3 p-3 rounded-lg ${role === 'user' ? 'bg-chat-user-gradient ml-auto max-w-3/4 text-gray-100' : 'bg-chat-ai-gradient mr-auto max-w-3/4 text-gray-100'}`;
+        
+        if (role === 'assistant') {
+          messageDiv.innerHTML = formatMessageContent(content);
+        } else {
+          messageDiv.textContent = content;
+        }
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      async function sendMessage() {
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        addMessage('user', message);
+        userInput.value = '';
+
+        try {
+          const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              model: 'deepseek-chat',
+              messages: [{ role: 'user', content: message }],
+              temperature: 0.7
+            })
+          });
+
+          const data = await response.json();
+          if (data.choices && data.choices[0].message) {
+            addMessage('assistant', data.choices[0].message.content);
+          } else {
+            addMessage('assistant', 'Sorry, I encountered an error processing your request.');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          addMessage('assistant', 'Sorry, there was an error connecting to the API.');
+        }
+      }
+
+      sendBtn.addEventListener('click', sendMessage);
+      userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+      });
+    });
+  </script>
+</body>
+</html>
