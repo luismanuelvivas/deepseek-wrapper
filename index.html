@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>deepseek wrapper</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/main.js" defer></script>
+  <script src="js/header.js" defer></script>
+  <script src="js/footer.js" defer></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4f46e5',
+            secondary: '#818cf8',
+            accent: '#a5b4fc',
+            dark: '#1f2937',
+            light: '#f9fafb',
+          },
+          backgroundImage: {
+            'purple-gradient': 'linear-gradient(to right, #6b21a8, #4c1d95, #1e1b4b)',
+            'dark-gradient': 'linear-gradient(to right, #111827, #030712)',
+            'chat-user-gradient': 'linear-gradient(to right, #6b21a8, #4c1d95)',
+            'chat-ai-gradient': 'linear-gradient(to right, #111827, #030712)',
+            'chat-bg-gradient': 'linear-gradient(to bottom, #1e1b4b, #030712)',
+            'welcome-gradient': 'linear-gradient(to right, #6b21a8, #111827)'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="min-h-screen bg-purple-gradient dark:bg-dark-gradient text-gray-900 dark:text-gray-100">
+
+ <header id="header">
+ </header>
+  
+  <main class="max-w-7xl mx-auto px-4 py-6">
+    <div class="bg-welcome-gradient p-6 rounded-lg shadow-lg backdrop-blur-sm">
+      
+      <div class="chat-container mt-6">
+        <div id="chat-messages" class="h-96 overflow-y-auto mb-4 p-4 border border-gray-600 rounded-lg bg-chat-bg-gradient text-gray-100">
+          <!-- Chat messages will appear here -->
+          <div class="text-center text-gray-400 py-8">Start chatting with DeepSeek AI</div>
+        </div>
+        
+        <div class="flex gap-2">
+          <input 
+            type="text" 
+            id="user-input" 
+            placeholder="Type your message..." 
+            class="flex-1 p-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-700/90 text-gray-100"
+          >
+          <button 
+            id="send-btn" 
+            class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-lg transition-colors"
+          >
+            Send
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+  
+  <footer id="footer"></footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const chatMessages = document.getElementById('chat-messages');
+      const userInput = document.getElementById('user-input');
+      const sendBtn = document.getElementById('send-btn');
+      const apiKey = 'sk-2132008bc86a4114a14aac1ab29119ad';
+
+      function formatMessageContent(content) {
+        // Replace **content** with bold
+        content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        // Replace headings with appropriate HTML tags
+        content = content.replace(/^#### (.*$)/gm, '<h4 class="text-lg font-semibold mt-4 mb-2">$1</h4>');
+        content = content.replace(/^### (.*$)/gm, '<h3 class="text-xl font-semibold mt-4 mb-2">$1</h3>');
+        content = content.replace(/^## (.*$)/gm, '<h2 class="text-2xl font-bold mt-4 mb-3">$1</h2>');
+        content = content.replace(/^# (.*$)/gm, '<h1 class="text-3xl font-bold mt-4 mb-4">$1</h1>');
+        
+        // Preserve line breaks
+        content = content.replace(/\n/g, '<br>');
+        
+        return content;
+      }
+
+      function addMessage(role, content) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `mb-3 p-3 rounded-lg ${role === 'user' ? 'bg-chat-user-gradient ml-auto max-w-3/4 text-gray-100' : 'bg-chat-ai-gradient mr-auto max-w-3/4 text-gray-100'}`;
+        
+        if (role === 'assistant') {
+          messageDiv.innerHTML = formatMessageContent(content);
+        } else {
+          messageDiv.textContent = content;
+        }
+        
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      async function sendMessage() {
+        const message = userInput.value.trim();
+        if (!message) return;
+
+        addMessage('user', message);
+        userInput.value = '';
+
+        try {
+          const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+              model: 'deepseek-chat',
+              messages: [{ role: 'user', content: message }],
+              temperature: 0.7
+            })
+          });
+
+          const data = await response.json();
+          if (data.choices && data.choices[0].message) {
+            addMessage('assistant', data.choices[0].message.content);
+          } else {
+            addMessage('assistant', 'Sorry, I encountered an error processing your request.');
+          }
+        } catch (error) {
+          console.error('Error:', error);
+          addMessage('assistant', 'Sorry, there was an error connecting to the API.');
+        }
+      }
+
+      sendBtn.addEventListener('click', sendMessage);
+      userInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+      });
+    });
+  </script>
+</body>
+</html>
